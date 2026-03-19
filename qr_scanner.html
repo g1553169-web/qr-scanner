@@ -6,209 +6,219 @@
 <title>QRスキャナー</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#000;font-family:'Hiragino Sans',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-#header{background:#1a73e8;color:#fff;padding:12px 16px;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-#close-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer}
-#video-wrap{position:relative;flex:1;overflow:hidden}
-#video{width:100%;height:100%;object-fit:cover;display:block}
-#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-#frame{width:220px;height:220px;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)}
-#status{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);color:#fff;text-align:center;padding:10px;font-size:14px}
-#result-list{position:absolute;top:0;left:0;right:0;max-height:40%;overflow-y:auto;background:rgba(0,0,0,.85)}
-.result-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.15)}
-.result-icon{font-size:16px;flex-shrink:0}
-.result-text{flex:1;color:#fff;font-size:13px;word-break:break-all}
-.result-time{color:rgba(255,255,255,.5);font-size:11px;flex-shrink:0}
-#error-box{display:none;position:absolute;inset:0;background:#1a1a1a;padding:24px;flex-direction:column;justify-content:center;align-items:center;text-align:center}
-#error-box.show{display:flex}
-.err-icon{font-size:48px;margin-bottom:16px}
-.err-title{color:#ff6b6b;font-size:17px;font-weight:600;margin-bottom:12px}
-.err-steps{color:#ccc;font-size:13px;line-height:1.8;margin-bottom:20px;text-align:left;background:rgba(255,255,255,.05);padding:12px;border-radius:8px;width:100%}
-.retry-btn{background:#1a73e8;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;width:100%}
-#done-btn{position:absolute;bottom:60px;left:16px;right:16px;background:#34a853;color:#fff;border:none;padding:14px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;display:none;z-index:10}
+body{background:#111;font-family:sans-serif;color:#fff;display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+#hdr{background:#1a73e8;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+#hdr span{font-size:15px;font-weight:600}
+#cb{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer}
+#vw{position:relative;flex:1;min-height:0}
+video{width:100%;height:100%;object-fit:cover;display:block}
+#frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:68vw;height:68vw;max-width:290px;max-height:290px;
+  border:4px solid #fff;border-radius:12px;
+  box-shadow:0 0 0 2000px rgba(0,0,0,.5)}
+@keyframes sc{0%{top:6%}100%{top:90%}}
+#sl{position:absolute;left:4%;right:4%;height:3px;
+  background:linear-gradient(90deg,transparent,#4af,transparent);
+  animation:sc 2s linear infinite}
+#rl{position:absolute;top:0;left:0;right:0;max-height:38%;overflow-y:auto;
+  background:rgba(0,0,0,.9);z-index:10}
+.ri{display:flex;align-items:center;gap:8px;padding:9px 12px;
+  border-bottom:1px solid rgba(255,255,255,.1);font-size:12px}
+#db{display:none;position:absolute;bottom:0;left:0;right:0;
+  background:rgba(0,0,0,.8);color:#0f0;font-size:11px;font-family:monospace;
+  padding:4px 8px;z-index:20;word-break:break-all}
+#done{display:none;position:absolute;bottom:8px;left:12px;right:12px;
+  background:#34a853;color:#fff;border:none;padding:13px;border-radius:10px;
+  font-size:15px;font-weight:600;cursor:pointer;z-index:15}
+#st{background:rgba(0,0,0,.75);padding:9px 12px;text-align:center;font-size:13px;flex-shrink:0}
+#eb{display:none;position:absolute;inset:0;background:#111;z-index:30;
+  flex-direction:column;justify-content:center;align-items:center;padding:20px;text-align:center}
+#eb.on{display:flex}
+.et{color:#f66;font-size:16px;font-weight:600;margin-bottom:12px}
+.es{color:#ccc;font-size:13px;line-height:1.8;white-space:pre-wrap;text-align:left;
+  background:rgba(255,255,255,.06);padding:12px;border-radius:8px;width:100%;margin-bottom:16px}
+.rb{background:#1a73e8;color:#fff;border:none;padding:12px;border-radius:8px;
+  font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-bottom:8px}
 </style>
 </head>
 <body>
-
-<div id="header">
+<div id="hdr">
   <span>📷 QRスキャナー</span>
-  <button id="close-btn" onclick="closeScanner()">✕ 閉じる</button>
+  <button id="cb" onclick="closeMe()">✕ 閉じる</button>
 </div>
-
-<div id="video-wrap">
-  <video id="video" autoplay playsinline muted></video>
-  <div id="overlay"><div id="frame"></div></div>
-  <div id="result-list"></div>
-  <div id="status">カメラを起動中...</div>
-  <button id="done-btn" onclick="closeScanner()">✅ 完了（読み取り済み: <span id="done-cnt">0</span>件）</button>
+<div id="vw">
+  <video id="v" autoplay playsinline muted></video>
+  <div id="frame"><div id="sl"></div></div>
+  <div id="rl"></div>
+  <button id="done" onclick="closeMe()">✅ 完了 (<span id="cnt">0</span>件)</button>
+  <div id="db"></div>
+  <div id="eb">
+    <div class="et" id="et">エラー</div>
+    <div class="es" id="es"></div>
+    <button class="rb" onclick="location.reload()">🔄 再試行</button>
+    <button class="rb" style="background:#555" onclick="showManual()">⌨️ ID直接入力</button>
+  </div>
 </div>
+<div id="st">起動中...</div>
 
-<div id="error-box">
-  <div class="err-icon">📷</div>
-  <div class="err-title" id="err-title">カメラエラー</div>
-  <div class="err-steps" id="err-steps"></div>
-  <button class="retry-btn" onclick="location.reload()">🔄 再試行</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
-// URLパラメータからオープナーのオリジンとモードを取得
-var params = new URLSearchParams(location.search);
-var targetOrigin = params.get('origin') || '*';
-var mode = params.get('mode') || 'multi'; // single or multi
+var mode = new URLSearchParams(location.search).get('mode') || 'multi';
+var v    = document.getElementById('v');
+var cool = {}, cnt = 0, raf, frames = 0;
+var useDetector = false; // BarcodeDetector使用フラグ
+var detector = null;
+var canvas, ctx;
 
-var scanned = {};  // 重複防止 {qrId: timestamp}
-var COOLDOWN = 3000;
-var scanCount = 0;
-var video = document.getElementById('video');
-var canvas = document.createElement('canvas');
-var ctx = canvas.getContext('2d', {willReadFrequently: true});
-var raf;
+function dbg(s){ document.getElementById('db').style.display='block'; document.getElementById('db').textContent=s; }
+function st(s,c){ var e=document.getElementById('st'); e.textContent=s; if(c) e.style.background=c; setTimeout(function(){e.style.background='';},1200); }
 
-// ── カメラ起動 ──────────────────────────────────────────────────
-async function startCamera() {
-  var constraints = [
-    {video: {facingMode: {ideal: 'environment'}, width: {ideal: 1280}}},
-    {video: {facingMode: 'environment'}},
-    {video: true}
+// BarcodeDetectorが使えるか確認（Chrome Android / Safari 17+）
+if(window.BarcodeDetector){
+  BarcodeDetector.getSupportedFormats().then(function(f){
+    if(f.indexOf('qr_code')>=0){
+      detector = new BarcodeDetector({formats:['qr_code']});
+      useDetector = true;
+      dbg('✅ BarcodeDetector API使用');
+    }
+  }).catch(function(){});
+}
+
+// jsQRをCDNから非同期で読む（失敗しても動く）
+var jsqrReady = false;
+var s = document.createElement('script');
+s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+s.onload  = function(){ jsqrReady=true; dbg('jsQR+BarcodeDetector両方使用'); };
+s.onerror = function(){ dbg(useDetector?'jsQR失敗→BarcodeDetectorで動作':'jsQR失敗'); };
+document.head.appendChild(s);
+
+// カメラ起動
+(async function(){
+  st('カメラ接続中...');
+  var tries = [
+    {video:{facingMode:{ideal:'environment'},width:{ideal:1920}}},
+    {video:{facingMode:{ideal:'environment'},width:{ideal:1280}}},
+    {video:{facingMode:'environment'}},
+    {video:{width:{ideal:1280}}},
+    {video:true}
   ];
-  var stream, lastErr;
-  for (var i = 0; i < constraints.length; i++) {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(constraints[i]);
-      break;
-    } catch(e) {
-      lastErr = e;
-      if (e.name === 'NotAllowedError') break; // 権限拒否は即エラー
+  var stream, err;
+  for(var i=0;i<tries.length;i++){
+    try{ stream=await navigator.mediaDevices.getUserMedia(tries[i]); break; }
+    catch(e){ err=e; if(e.name==='NotAllowedError') break; }
+  }
+  if(!stream){ showErr(err); return; }
+  v.srcObject=stream;
+  v.onloadedmetadata=function(){
+    st('QRコードを枠に入れてください');
+    dbg('映像: '+v.videoWidth+'x'+v.videoHeight);
+  };
+  try{ await v.play(); }catch(e){}
+
+  // canvas準備
+  canvas=document.createElement('canvas');
+  ctx=canvas.getContext('2d',{willReadFrequently:true});
+  raf=requestAnimationFrame(loop);
+})();
+
+async function loop(){
+  frames++;
+  if(v.readyState>=2 && v.videoWidth>0){
+    canvas.width=v.videoWidth; canvas.height=v.videoHeight;
+    ctx.drawImage(v,0,0,canvas.width,canvas.height);
+
+    var data=null;
+
+    // 方法1: BarcodeDetector (ネイティブ実装、最高精度)
+    if(detector && frames%3===0){ // 3フレームに1回
+      try{
+        var r=await detector.detect(canvas);
+        if(r.length>0) data=r[0].rawValue;
+      }catch(e){}
     }
-  }
-  if (!stream) { showError(lastErr); return; }
-  video.srcObject = stream;
-  await video.play();
-  document.getElementById('status').textContent = 'QRコードをカメラに向けてください';
-  requestAnimationFrame(scanLoop);
-}
 
-// ── スキャンループ ──────────────────────────────────────────────
-function scanLoop() {
-  if (video.readyState === video.HAVE_ENOUGH_DATA) {
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var code = jsQR(img.data, img.width, img.height);
-    if (code && code.data) {
-      var now = Date.now();
-      if (!scanned[code.data] || now - scanned[code.data] > COOLDOWN) {
-        scanned[code.data] = now;
-        onScan(code.data);
-      }
+    // 方法2: jsQR (CDNから読み込んだ場合)
+    if(!data && jsqrReady){
+      try{
+        var img=ctx.getImageData(0,0,canvas.width,canvas.height);
+        var q=jsQR(img.data,img.width,img.height,{inversionAttempts:'attemptBoth'});
+        if(q) data=q.data;
+      }catch(e){}
     }
+
+    if(data){
+      var now=Date.now();
+      if(!cool[data]||now-cool[data]>2500){ cool[data]=now; onScan(data); }
+    }
+
+    if(frames%90===0) dbg((useDetector?'BD+':'')+(jsqrReady?'jsQR ':'')+'スキャン中 '+v.videoWidth+'x'+v.videoHeight+' / '+cnt+'件');
+  } else {
+    if(frames%30===0) dbg('映像待機 readyState='+v.readyState);
   }
-  raf = requestAnimationFrame(scanLoop);
+  raf=requestAnimationFrame(loop);
 }
 
-// ── スキャン成功 ────────────────────────────────────────────────
-function onScan(data) {
-  scanCount++;
-  // 音（ビープ）
-  try {
-    var ac = new (window.AudioContext || window.webkitAudioContext)();
-    var o = ac.createOscillator();
-    var g = ac.createGain();
-    o.connect(g); g.connect(ac.destination);
-    o.frequency.value = 880; o.type = 'sine';
-    g.gain.setValueAtTime(0.3, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
-    o.start(ac.currentTime); o.stop(ac.currentTime + 0.15);
-  } catch(e) {}
+function onScan(data){
+  cnt++;
+  st('✅ 読取: '+data.substring(0,25), 'rgba(52,168,83,.85)');
+  dbg('✅ 読取: '+data);
 
-  // 結果リストに追加
-  var now = new Date();
-  var timeStr = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
-  var item = document.createElement('div');
-  item.className = 'result-item';
-  item.innerHTML = '<span class="result-icon">✅</span>'
-    + '<span class="result-text">' + data.substring(0, 40) + (data.length > 40 ? '...' : '') + '</span>'
-    + '<span class="result-time">' + timeStr + '</span>';
-  document.getElementById('result-list').insertBefore(item, document.getElementById('result-list').firstChild);
+  // 効果音
+  try{
+    var ac=new(window.AudioContext||window.webkitAudioContext)();
+    var o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    o.frequency.value=880;g.gain.setValueAtTime(.4,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.2);
+    o.start();o.stop(ac.currentTime+.2);
+  }catch(e){}
 
-  // ステータス更新
-  document.getElementById('status').textContent = '読み取り済み: ' + scanCount + '件 — 続けてスキャンできます';
-  document.getElementById('done-cnt').textContent = scanCount;
-  document.getElementById('done-btn').style.display = 'block';
+  // 画面フラッシュ
+  document.body.style.background='#34a853';
+  setTimeout(function(){document.body.style.background='#111';},350);
 
-  // オープナーに送信
-  if (window.opener && !window.opener.closed) {
-    window.opener.postMessage({type: 'QR_SCAN', data: data, count: scanCount}, targetOrigin);
-  }
+  // リストに追加
+  var t=new Date(), ts=('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2)+':'+('0'+t.getSeconds()).slice(-2);
+  var el=document.createElement('div'); el.className='ri';
+  el.innerHTML='<span style="color:#34a853">✅</span><span style="flex:1;word-break:break-all">'+data.substring(0,50)+'</span><span style="opacity:.5">'+ts+'</span>';
+  var rl=document.getElementById('rl'); rl.insertBefore(el,rl.firstChild);
+  document.getElementById('cnt').textContent=cnt;
+  document.getElementById('done').style.display='block';
 
-  // single モードは1件で自動クローズ
-  if (mode === 'single') {
-    setTimeout(closeScanner, 800);
-  }
+  // 親へ送信
+  if(window.opener&&!window.opener.closed)
+    window.opener.postMessage({type:'QR_SCAN',data:data,count:cnt},'*');
+  if(mode==='single') setTimeout(closeMe,700);
 }
 
-// ── クローズ ───────────────────────────────────────────────────
-function closeScanner() {
-  if (raf) cancelAnimationFrame(raf);
-  if (video.srcObject) video.srcObject.getTracks().forEach(function(t){ t.stop(); });
-  if (window.opener && !window.opener.closed) {
-    window.opener.postMessage({type: 'QR_CLOSE', count: scanCount}, targetOrigin);
-  }
+function closeMe(){
+  if(raf) cancelAnimationFrame(raf);
+  if(v.srcObject) v.srcObject.getTracks().forEach(function(t){t.stop();});
+  if(window.opener&&!window.opener.closed)
+    window.opener.postMessage({type:'QR_CLOSE',count:cnt},'*');
   window.close();
 }
 
-// ── エラー表示 ─────────────────────────────────────────────────
-function showError(err) {
-  var title, steps;
-  var isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
-  var ua = navigator.userAgent;
-  var isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
-  var browserName = /CriOS/.test(ua)?'Chrome(iOS)':/FxiOS/.test(ua)?'Firefox(iOS)':/Line/.test(ua)?'LINE':isSafari?'Safari':/Chrome/.test(ua)?'Chrome':'ブラウザ';
-
-  if (!err || err.name === 'NotAllowedError') {
-    title = '❌ カメラの使用が拒否されています';
-    if (isIOS) {
-      steps = '① iPhoneの「設定」アプリを開く\n'
-        + (isSafari
-          ? '② 「Safari」→「カメラ」→「許可」に変更\n'
-          : '② 「' + browserName + '」→「カメラ」→「許可」に変更\n'
-            + '   ※ iPhoneはSafariを強く推奨\n')
-        + '③ この画面を再試行';
-    } else {
-      steps = '① このページのアドレスバー左の🔒をタップ\n'
-        + '② 「カメラ」→「許可」に変更\n'
-        + '③ 再試行ボタンを押す';
-    }
-  } else if (err.name === 'NotFoundError') {
-    title = '❌ カメラが見つかりません';
-    steps = '・カメラが搭載された端末で開いてください\n・他のアプリがカメラを使用中の場合は終了してください';
-  } else if (err.name === 'NotReadableError') {
-    title = '⚠️ カメラにアクセスできません';
-    steps = '・他のアプリ（カメラ・ビデオ通話等）を終了してください\n・解決しない場合はスマホを再起動してください';
-  } else {
-    title = '⚠️ カメラエラー: ' + (err ? err.name : '不明');
-    steps = err ? err.message : '不明なエラーです\n再試行してください';
-  }
-
-  document.getElementById('err-title').textContent = title;
-  document.getElementById('err-steps').textContent = steps;
-  document.getElementById('error-box').classList.add('show');
-  document.getElementById('status').textContent = 'エラー';
+function showErr(err){
+  var isIOS=/iP(hone|od|ad)/.test(navigator.userAgent);
+  var t='⚠️ カメラエラー', s='';
+  if(!err||err.name==='NotAllowedError'){
+    t='❌ カメラが許可されていません';
+    s=isIOS?'① 設定 → Safari → カメラ → 許可\n② このページを再試行'
+           :'① アドレスバーの🔒をタップ\n② カメラ → 許可\n③ 再試行';
+  } else { t='⚠️ '+err.name; s=err.message; }
+  document.getElementById('et').textContent=t;
+  document.getElementById('es').textContent=s;
+  document.getElementById('eb').classList.add('on');
 }
 
-// ── 起動 ───────────────────────────────────────────────────────
-if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-  showError(null);
-} else {
-  startCamera().catch(showError);
+function showManual(){
+  document.getElementById('eb').classList.remove('on');
+  var d=prompt('備品IDを入力してください（例: ET-0001）');
+  if(d && d.trim()) onScan(d.trim());
+  else document.getElementById('eb').classList.add('on');
 }
 
-// ── 戻るボタン / ESCキー ────────────────────────────────────────
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeScanner();
-});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMe();});
 </script>
 </body>
 </html>
